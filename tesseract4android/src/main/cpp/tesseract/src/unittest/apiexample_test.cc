@@ -22,24 +22,23 @@
 // expects clone of tessdata_fast repo in ../../tessdata_fast
 
 //#include "log.h"
-#include <limits.h>
 #include <time.h>
 #include <fstream>
 #include <iostream>
 #include <locale>
 #include <memory>               // std::unique_ptr
 #include <string>
-#include "baseapi.h"
+#include <tesseract/baseapi.h>
 #include "include_gunit.h"
-#include "leptonica/allheaders.h"
+#include "allheaders.h"
 
-namespace {
+namespace tesseract {
 
 class QuickTest : public testing::Test {
  protected:
   virtual void SetUp() { start_time_ = time(nullptr); }
   virtual void TearDown() {
-#if defined(DEBUG)
+#ifndef NDEBUG
     // Debug builds can be very slow, so allow 4 min for OCR of a test image.
     // apitest_example including disabled tests takes about 18 min on ARMv7.
     const time_t MAX_SECONDS_FOR_TEST = 240;

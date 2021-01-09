@@ -16,15 +16,6 @@
 //
 ///////////////////////////////////////////////////////////////////////
 
-#ifdef __MINGW32__
-#include <limits.h>
-#endif
-
-#include <algorithm>
-#include <cfloat>
-#include <limits>
-#include <memory>
-
 // Include automatically generated configuration file if running autoconf.
 #ifdef HAVE_CONFIG_H
 #include "config_auto.h"
@@ -37,17 +28,23 @@
 #include "colpartition.h"
 #include "colpartitiongrid.h"
 #include "colpartitionset.h"
-#include "helpers.h"
 #include "ratngs.h"
 #include "tesseractclass.h"
+
+#include "helpers.h"
+
+#include <algorithm>
+#include <cfloat>
+#include <limits>
+#include <memory>
+
+namespace tesseract {
 
 // Config variables.
 static BOOL_VAR(equationdetect_save_bi_image, false, "Save input bi image");
 static BOOL_VAR(equationdetect_save_spt_image, false, "Save special character image");
 static BOOL_VAR(equationdetect_save_seed_image, false, "Save the seed image");
 static BOOL_VAR(equationdetect_save_merged_image, false, "Save the merged image");
-
-namespace tesseract {
 
 ///////////////////////////////////////////////////////////////////////////
 // Utility ColParition sort functions.
@@ -237,7 +234,7 @@ BlobSpecialTextType EquationDetect::EstimateTypeForUnichar(
       int i = 0;
       while (kCharsToEx[i] != "") {
         ids_to_exclude.push_back(
-            unicharset.unichar_to_id(kCharsToEx[i++].string()));
+            unicharset.unichar_to_id(kCharsToEx[i++].c_str()));
       }
       ids_to_exclude.sort();
     }
@@ -374,7 +371,7 @@ int EquationDetect::FindEquationParts(
 
   if (equationdetect_save_bi_image) {
     GetOutputTiffName("_bi", &outfile);
-    pixWrite(outfile.string(), lang_tesseract_->pix_binary(), IFF_TIFF_G4);
+    pixWrite(outfile.c_str(), lang_tesseract_->pix_binary(), IFF_TIFF_G4);
   }
 
   // Pass 0: Compute special text type for blobs.
@@ -1474,7 +1471,7 @@ void EquationDetect::PaintSpecialTexts(const STRING& outfile) const {
     }
   }
 
-  pixWrite(outfile.string(), pix, IFF_TIFF_LZW);
+  pixWrite(outfile.c_str(), pix, IFF_TIFF_LZW);
   pixDestroy(&pix);
 }
 
@@ -1497,7 +1494,7 @@ void EquationDetect::PaintColParts(const STRING& outfile) const {
     boxDestroy(&box);
   }
 
-  pixWrite(outfile.string(), pix, IFF_TIFF_LZW);
+  pixWrite(outfile.c_str(), pix, IFF_TIFF_LZW);
   pixDestroy(&pix);
 }
 

@@ -3,7 +3,6 @@
 // Description: Creates a unified traineddata file from several
 //              data files produced by the training process.
 // Author:      Daria Antonova
-// Created:     Wed Jun 03 11:26:43 PST 2009
 //
 // (C) Copyright 2009, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,10 +17,13 @@
 //
 ///////////////////////////////////////////////////////////////////////
 
-#include <cerrno>
 #include "commontraining.h"     // CheckSharedLibraryVersion
 #include "lstmrecognizer.h"
 #include "tessdatamanager.h"
+
+#include <cerrno>
+
+using namespace tesseract;
 
 // Main program to combine/extract/overwrite tessdata components
 // in [lang].traineddata files.
@@ -82,11 +84,11 @@ int main(int argc, char **argv) {
       lang += '.';
     STRING output_file = lang;
     output_file += kTrainedDataSuffix;
-    if (!tm.CombineDataFiles(lang.string(), output_file.string())) {
+    if (!tm.CombineDataFiles(lang.c_str(), output_file.c_str())) {
       printf("Error combining tessdata files into %s\n",
-             output_file.string());
+             output_file.c_str());
     } else {
-      printf("Output %s created successfully.\n", output_file.string());
+      printf("Output %s created successfully.\n", output_file.c_str());
     }
   } else if (argc >= 4 && (strcmp(argv[1], "-e") == 0 ||
                            strcmp(argv[1], "-u") == 0)) {
@@ -119,11 +121,11 @@ int main(int argc, char **argv) {
           filename += '.';
         filename += tesseract::kTessdataFileSuffixes[i];
         errno = 0;
-        if (tm.ExtractToFile(filename.string())) {
-          printf("Wrote %s\n", filename.string());
+        if (tm.ExtractToFile(filename.c_str())) {
+          printf("Wrote %s\n", filename.c_str());
         } else if (errno != 0) {
           printf("Error, could not extract %s: %s\n",
-                 filename.string(), strerror(errno));
+                 filename.c_str(), strerror(errno));
           return EXIT_FAILURE;
         }
       }
@@ -133,14 +135,14 @@ int main(int argc, char **argv) {
     const char *new_traineddata_filename = argv[2];
     STRING traineddata_filename = new_traineddata_filename;
     traineddata_filename += ".__tmp__";
-    if (rename(new_traineddata_filename, traineddata_filename.string()) != 0) {
+    if (rename(new_traineddata_filename, traineddata_filename.c_str()) != 0) {
       tprintf("Failed to create a temporary file %s\n",
-              traineddata_filename.string());
+              traineddata_filename.c_str());
       return EXIT_FAILURE;
     }
 
     // Initialize TessdataManager with the data in the given traineddata file.
-    tm.Init(traineddata_filename.string());
+    tm.Init(traineddata_filename.c_str());
 
     // Write the updated traineddata file.
     tm.OverwriteComponents(new_traineddata_filename, argv+3, argc-3);
@@ -160,7 +162,7 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
     }
     recognizer.ConvertToInt();
-    GenericVector<char> lstm_data;
+    std::vector<char> lstm_data;
     fp.OpenWrite(&lstm_data);
     ASSERT_HOST(recognizer.Serialize(&tm, &fp));
     tm.OverwriteEntry(tesseract::TESSDATA_LSTM, &lstm_data[0],

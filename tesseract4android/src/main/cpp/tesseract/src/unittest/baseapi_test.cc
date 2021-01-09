@@ -9,24 +9,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "absl/strings/ascii.h"
-#include "absl/strings/str_cat.h"
-#include "allheaders.h"
-
 #include "include_gunit.h"
-#include "gmock/gmock-matchers.h"
 
-#include "baseapi.h"
 #include "cycletimer.h" // for CycleTimer
 #include "log.h"        // for LOG
 #include "ocrblock.h"   // for class BLOCK
 #include "pageres.h"
 
-namespace {
+#include <tesseract/baseapi.h>
+
+#include "allheaders.h"
+#include "absl/strings/ascii.h"
+#include "absl/strings/str_cat.h"
+#include "gmock/gmock-matchers.h"
+
+#include <memory>
+#include <regex>
+#include <string>
+#include <vector>
+
+namespace tesseract {
 
 using ::testing::ContainsRegex;
 using ::testing::HasSubstr;
@@ -147,8 +149,8 @@ TEST_F(TesseractTest, HOCRContainsBaseline) {
   char* result = api.GetHOCRText(0);
   EXPECT_TRUE(result != nullptr);
   EXPECT_THAT(result, HasSubstr("Hello"));
-  EXPECT_THAT(result, ContainsRegex("<span class='ocr_line'[^>]* "
-                                    "baseline [-.0-9]+ [-.0-9]+"));
+  EXPECT_TRUE(std::regex_search(result, std::regex{ "<span class='ocr_line'[^>]* baseline [-.0-9]+ [-.0-9]+" }));
+
   delete[] result;
   pixDestroy(&src_pix);
 }
@@ -257,10 +259,6 @@ TEST_F(TesseractTest, BasicLSTMTest) {
 // errors due to float/int conversions (e.g., see OUTLINE::move() in
 // ccstruct/poutline.h) Instead, we do a loose check.
 TEST_F(TesseractTest, LSTMGeometryTest) {
-#ifdef DISABLED_LEGACY_ENGINE
-  // Skip test because TessBaseAPI::GetPageRes is missing.
-  GTEST_SKIP();
-#else
   Pix* src_pix = pixRead(TestDataNameToPath("deslant.tif").c_str());
   FriendlyTessBaseAPI api;
   if (api.Init(TessdataPath().c_str(), "eng", tesseract::OEM_LSTM_ONLY) == -1) {
@@ -303,7 +301,6 @@ TEST_F(TesseractTest, LSTMGeometryTest) {
     }
   }
   pixDestroy(&src_pix);
-#endif
 }
 
 TEST_F(TesseractTest, InitConfigOnlyTest) {
@@ -311,7 +308,7 @@ TEST_F(TesseractTest, InitConfigOnlyTest) {
   const char* langs[] = {"eng", "chi_tra", "jpn", "vie"};
   std::unique_ptr<tesseract::TessBaseAPI> api;
   CycleTimer timer;
-  for (int i = 0; i < ARRAYSIZE(langs); ++i) {
+  for (size_t i = 0; i < ARRAYSIZE(langs); ++i) {
     api.reset(new tesseract::TessBaseAPI);
     timer.Restart();
     EXPECT_EQ(0, api->Init(TessdataPath().c_str(), langs[i],
@@ -321,11 +318,11 @@ TEST_F(TesseractTest, InitConfigOnlyTest) {
               << "ms in regular init";
   }
   // Init variables to set for config-only initialization.
-  GenericVector<STRING> vars_vec, vars_values;
-  vars_vec.push_back(STRING("tessedit_init_config_only"));
-  vars_values.push_back(STRING("1"));
+  std::vector<std::string> vars_vec, vars_values;
+  vars_vec.push_back("tessedit_init_config_only");
+  vars_values.push_back("1");
   LOG(INFO) << "Switching to config only initialization:";
-  for (int i = 0; i < ARRAYSIZE(langs); ++i) {
+  for (size_t i = 0; i < ARRAYSIZE(langs); ++i) {
     api.reset(new tesseract::TessBaseAPI);
     timer.Restart();
     EXPECT_EQ(0, api->Init(TessdataPath().c_str(), langs[i],

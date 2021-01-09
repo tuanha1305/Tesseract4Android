@@ -15,21 +15,17 @@
 #include "include_gunit.h"
 
 #include "allheaders.h"
-#include "baseapi.h"
+#include <tesseract/baseapi.h>
 #include "coutln.h"
 #include "log.h"                        // for LOG
 #include "mutableiterator.h"
 #include "ocrblock.h"                   // for class BLOCK
 #include "pageres.h"
 #include "polyblk.h"
-#include "resultiterator.h"
+#include <tesseract/resultiterator.h>
 #include "stepblob.h"
 
-namespace {
-
-using tesseract::MutableIterator;
-using tesseract::PageIteratorLevel;
-using tesseract::ResultIterator;
+namespace tesseract {
 
 /** String name for each block type. Keep in sync with PolyBlockType. */
 static const char* kPolyBlockNames[] = {

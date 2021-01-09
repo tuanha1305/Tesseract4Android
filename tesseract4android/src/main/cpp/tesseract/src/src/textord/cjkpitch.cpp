@@ -25,18 +25,18 @@
 #include <algorithm>
 #include <vector>       // for std::vector
 
+namespace tesseract {
+
 static BOOL_VAR(textord_space_size_is_variable, false,
                 "If true, word delimiter spaces are assumed to have "
                 "variable width, even though characters have fixed pitch.");
 
-namespace {
-
 // Allow +/-10% error for character pitch / body size.
-static const float kFPTolerance = 0.1;
+static const float kFPTolerance = 0.1f;
 
 // Minimum ratio of "good" character pitch for a row to be considered
 // to be fixed-pitch.
-static const float kFixedPitchThreshold = 0.35;
+static const float kFixedPitchThreshold = 0.35f;
 
 // rank statistics for a small collection of float values.
 class SimpleStats {
@@ -1020,7 +1020,7 @@ void FPAnalyzer::EstimatePitch(bool pass1) {
     } else if (row.num_chars() > 1) {
       float estimated_pitch =
           pitch_height_stats.EstimateYFor(row.height() + row.gap(),
-                                          0.1);
+                                          0.1f);
       // CJK characters are more likely to be fragmented than poorly
       // chopped. So trust the page-level estimation of character
       // pitch only if it's larger than row-level estimation or
@@ -1034,8 +1034,6 @@ void FPAnalyzer::EstimatePitch(bool pass1) {
     }
   }
 }
-
-}  // namespace
 
 void compute_fixed_pitch_cjk(ICOORD page_tr,
                              TO_BLOCK_LIST *port_blocks) {
@@ -1074,3 +1072,5 @@ void compute_fixed_pitch_cjk(ICOORD page_tr,
   analyzer.OutputEstimations();
   if (textord_debug_pitch_test) analyzer.DebugOutputResult();
 }
+
+} // namespace tesseract

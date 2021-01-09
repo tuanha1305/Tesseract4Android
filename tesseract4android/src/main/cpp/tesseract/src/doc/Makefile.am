@@ -12,7 +12,7 @@ man_MANS = \
   set_unicharset_properties.1 \
   tesseract.1 \
   text2image.1 \
-  unicharambigs.5 \
+  unicharset.5 \
   unicharset_extractor.1 \
   wordlist2dawg.1
 
@@ -23,7 +23,7 @@ man_MANS += \
   cntraining.1 \
   mftraining.1 \
   shapeclustering.1 \
-  unicharset.5
+  unicharambigs.5
 endif
 
 man_xslt = http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl
@@ -38,8 +38,13 @@ pdf: ${man_MANS:%=%.pdf}
 SUFFIXES = .asc .html .pdf
 
 .asc:
-	-asciidoc -b docbook -d manpage -o - $< | \
+if HAVE_XML_CATALOG_FILES
+	asciidoc -b docbook -d manpage -o - $< | \
+	XML_CATALOG_FILES=$(XML_CATALOG_FILES) xsltproc --nonet $(man_xslt) -
+else
+	asciidoc -b docbook -d manpage -o - $< | \
 	xsltproc --nonet $(man_xslt) -
+endif
 
 .asc.html:
 	asciidoc -b html5 -o $@ $<

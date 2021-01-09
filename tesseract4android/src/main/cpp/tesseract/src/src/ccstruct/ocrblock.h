@@ -23,10 +23,13 @@
 #include "ocrrow.h"
 #include "pdblock.h"
 
+namespace tesseract {
+
 class BLOCK;                     //forward decl
 
-ELISTIZEH (BLOCK)
-class BLOCK:public ELIST_LINK
+ELISTIZEH(BLOCK)
+
+class TESS_API BLOCK : public ELIST_LINK
 //page block
 {
   friend class BLOCK_RECT_IT;     //block iterator
@@ -35,7 +38,6 @@ class BLOCK:public ELIST_LINK
     : re_rotation_(1.0f, 0.0f),
       classify_rotation_(1.0f, 0.0f),
       skew_(1.0f, 0.0f) {
-    pdblk.hand_poly = nullptr;
   }
   BLOCK(const char *name,  ///< filename
         bool prop,         ///< proportional
@@ -100,7 +102,7 @@ class BLOCK:public ELIST_LINK
   }
   /// return filename
   const char *name() const {
-    return filename.string ();
+    return filename.c_str ();
   }
   /// return xheight
   int32_t x_height() const {
@@ -228,5 +230,7 @@ void ExtractBlobsFromSegmentation(BLOCK_LIST* blocks,
 void RefreshWordBlobsFromNewBlobs(BLOCK_LIST* block_list,
                                   C_BLOB_LIST* new_blobs,
                                   C_BLOB_LIST* not_found_blobs);
+
+} // namespace tesseract
 
 #endif

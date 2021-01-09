@@ -23,16 +23,17 @@
 
 #include "bbgrid.h"
 #include "blobbox.h"
-#include "strngs.h"
 #include "tabvector.h"
+
+#include "strngs.h"
+
+namespace tesseract {
 
 extern INT_VAR_H(textord_debug_bugs, 0,
                  "Turn on output related to bugs in tab finding");
 extern INT_VAR_H(textord_debug_tabfind, 2, "Debug tab finding");
 extern BOOL_VAR_H(textord_debug_printable, false,
                   "Make debug windows printable");
-
-namespace tesseract {
 
 // Simple structure to hold the search parameters for AlignedBlob.
 // The members are mostly derived from constants, which are
@@ -78,7 +79,7 @@ struct AlignedBlobParams {
 // The AlignedBlob class contains code to find vertically aligned blobs.
 // This is factored out into a separate class, so it can be used by both
 // vertical line finding (LineFind) and tabstop finding (TabFind).
-class AlignedBlob : public BlobGrid {
+class TESS_API AlignedBlob : public BlobGrid {
  public:
   AlignedBlob(int gridsize, const ICOORD& bleft, const ICOORD& tright);
   ~AlignedBlob() override;

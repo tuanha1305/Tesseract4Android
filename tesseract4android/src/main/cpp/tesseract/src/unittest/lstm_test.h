@@ -47,6 +47,7 @@ class LSTMTrainerTest : public testing::Test {
  protected:
   void SetUp() {
     std::locale::global(std::locale(""));
+    file::MakeTmpdir();
   }
 
   LSTMTrainerTest() {}
@@ -78,14 +79,13 @@ class LSTMTrainerTest : public testing::Test {
     ASSERT_TRUE(unicharset.load_from_file(unicharset_name.c_str(), false));
     std::string script_dir = file::JoinPath(
         LANGDATA_DIR, "");
-    GenericVector<STRING> words;
+    std::vector<STRING> words;
     EXPECT_EQ(0, CombineLangModel(unicharset, script_dir, "", FLAGS_test_tmpdir,
                                   kLang, !recode, words, words, words, false,
                                   nullptr, nullptr));
     std::string model_path = file::JoinPath(FLAGS_test_tmpdir, model_name);
     std::string checkpoint_path = model_path + "_checkpoint";
-    trainer_.reset(new LSTMTrainer(nullptr, nullptr, nullptr, nullptr,
-                                   model_path.c_str(), checkpoint_path.c_str(),
+    trainer_.reset(new LSTMTrainer(model_path.c_str(), checkpoint_path.c_str(),
                                    0, 0));
     trainer_->InitCharSet(file::JoinPath(FLAGS_test_tmpdir, kLang,
     absl::StrCat(kLang, ".traineddata")));
@@ -96,7 +96,7 @@ class LSTMTrainerTest : public testing::Test {
     if (layer_specific) net_mode |= NF_LAYER_SPECIFIC_LR;
     EXPECT_TRUE(trainer_->InitNetwork(network_spec.c_str(), -1, net_mode, 0.1,
                                       learning_rate, 0.9, 0.999));
-    GenericVector<STRING> filenames;
+    std::vector<STRING> filenames;
     filenames.push_back(STRING(TestDataNameToPath(lstmf_file).c_str()));
     EXPECT_TRUE(trainer_->LoadAllTrainingData(filenames, CS_SEQUENTIAL, false));
     LOG(INFO) << "Setup network:" << model_name << "\n" ;
@@ -119,7 +119,7 @@ class LSTMTrainerTest : public testing::Test {
       trainer_->MaintainCheckpoints(nullptr, &log_str);
       iteration = trainer_->training_iteration();
       mean_error *= 100.0 / kBatchIterations;
-      LOG(INFO) << log_str.string();
+      LOG(INFO) << log_str.c_str();
       LOG(INFO) << "Best error = " << best_error << "\n" ;
       LOG(INFO) << "Mean error = " << mean_error << "\n" ;
       if (mean_error < best_error) best_error = mean_error;
@@ -152,7 +152,7 @@ class LSTMTrainerTest : public testing::Test {
   // within 1% of the error rate. Returns the increase in error from float to
   // int.
   double TestIntMode(int test_iterations) {
-    GenericVector<char> trainer_data;
+    std::vector<char> trainer_data;
     EXPECT_TRUE(trainer_->SaveTrainingDump(NO_BEST_TRAINER, trainer_.get(),
                                            &trainer_data));
     // Get the error on the next few iterations in float mode.
@@ -172,7 +172,7 @@ class LSTMTrainerTest : public testing::Test {
     std::string lstmf_name = lang +  ".Arial_Unicode_MS.exp0.lstmf";
     SetupTrainer("[1,1,0,32 Lbx100 O1c1]", "bidi-lstm", unicharset_name,
                  lstmf_name, recode, true, 5e-4, true, lang);
-    GenericVector<int> labels;
+    std::vector<int> labels;
     EXPECT_TRUE(trainer_->EncodeString(str.c_str(), &labels));
     STRING decoded = trainer_->DecodeLabels(labels);
     std::string decoded_str(&decoded[0], decoded.length());

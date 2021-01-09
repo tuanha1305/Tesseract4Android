@@ -28,8 +28,8 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 # Define date of package, etc. Could be useful in auto-generated
 # documentation.
-PACKAGE_YEAR=2019
-PACKAGE_DATE="12/27"
+PACKAGE_YEAR=2020
+PACKAGE_DATE="12/31"
 
 abs_top_srcdir=`AS_DIRNAME([$0])`
 
@@ -124,17 +124,66 @@ AX_CHECK_COMPILE_FLAG([-Werror=unused-command-line-argument], [WERROR=-Werror=un
 
 ## Checks for supported compiler options.
 
-AX_CHECK_COMPILE_FLAG([-mavx], [avx=true], [avx=false], [$WERROR])
-AM_CONDITIONAL([AVX_OPT], ${avx})
+AM_CONDITIONAL([HAVE_AVX], false)
+AM_CONDITIONAL([HAVE_AVX2], false)
+AM_CONDITIONAL([HAVE_FMA], false)
+AM_CONDITIONAL([HAVE_SSE4_1], false)
+AM_CONDITIONAL([HAVE_NEON], false)
 
-AX_CHECK_COMPILE_FLAG([-mavx2], [avx2=true], [avx2=false], [$WERROR])
-AM_CONDITIONAL([AVX2_OPT], $avx2)
+case "${host_cpu}" in
 
-AX_CHECK_COMPILE_FLAG([-mfma], [fma=true], [fma=false], [$WERROR])
-AM_CONDITIONAL([FMA_OPT], $fma)
+  *86*)
 
-AX_CHECK_COMPILE_FLAG([-msse4.1], [sse41=true], [sse41=false], [$WERROR])
-AM_CONDITIONAL([SSE41_OPT], $sse41)
+    AX_CHECK_COMPILE_FLAG([-mavx], [avx=true], [avx=false], [$WERROR])
+    AM_CONDITIONAL([HAVE_AVX], ${avx})
+    if $avx; then
+      AC_DEFINE([HAVE_AVX], [1], [Enable AVX instructions])
+    fi
+
+    AX_CHECK_COMPILE_FLAG([-mavx2], [avx2=true], [avx2=false], [$WERROR])
+    AM_CONDITIONAL([HAVE_AVX2], $avx2)
+    if $avx2; then
+      AC_DEFINE([HAVE_AVX2], [1], [Enable AVX2 instructions])
+    fi
+
+    AX_CHECK_COMPILE_FLAG([-mfma], [fma=true], [fma=false], [$WERROR])
+    AM_CONDITIONAL([HAVE_FMA], $fma)
+    if $fma; then
+      AC_DEFINE([HAVE_FMA], [1], [Enable FMA instructions])
+    fi
+
+    AX_CHECK_COMPILE_FLAG([-msse4.1], [sse41=true], [sse41=false], [$WERROR])
+    AM_CONDITIONAL([HAVE_SSE4_1], $sse41)
+    if $sse41; then
+      AC_DEFINE([HAVE_SSE4_1], [1], [Enable SSE 4.1 instructions])
+    fi
+
+    ;;
+
+  aarch64)
+
+    # ARMv8 always has NEON and does not need special compiler flags.
+    AM_CONDITIONAL([HAVE_NEON], true)
+    AC_DEFINE([HAVE_NEON], [1], [Enable NEON instructions])
+    ;;
+
+  arm*)
+
+    AX_CHECK_COMPILE_FLAG([-mfpu=neon], [neon=true], [neon=false], [$WERROR])
+    AM_CONDITIONAL([HAVE_NEON], $neon)
+    if $neon; then
+      AC_DEFINE([HAVE_NEON], [1], [Enable NEON instructions])
+      NEON_CXXFLAGS="-mfpu=neon"
+      AC_SUBST([NEON_CXXFLAGS])
+    fi
+
+    ;;
+
+  *)
+
+    AC_MSG_WARN([No compiler options for $host_cpu])
+
+esac
 
 AX_CHECK_COMPILE_FLAG([-march=native], [arch_native=true], [arch_native=false], [$WERROR])
 AM_CONDITIONAL([MARCH_NATIVE_OPT], $arch_native)
@@ -171,6 +220,9 @@ AC_ARG_ENABLE([legacy],
   AS_HELP_STRING([--disable-legacy], [disable the legacy OCR engine]))
 AC_MSG_RESULT([$enable_legacy])
 AM_CONDITIONAL([DISABLED_LEGACY_ENGINE], test "$enable_legacy" = "no")
+if test "$enable_legacy" = "no"; then
+  AC_DEFINE([DISABLED_LEGACY_ENGINE], [1], [Disable legacy OCR engine])
+fi
 
 # check whether to build OpenMP support
 AC_OPENMP
@@ -323,25 +375,6 @@ else
     AM_CPPFLAGS="$AM_CPPFLAGS -O2 -DNDEBUG"
 fi
 
-#localedir='${prefix}/share/locale'
-
-# Always look into a "gnu" directory.
-curwd=`pwd`
-if test -d $curwd/gnu/include ; then
-   CPPFLAGS="$CPPFLAGS -I$curwd/gnu/include"
-fi
-if test -d $curwd/gnu/lib ; then
-   LDFLAGS="$LDFLAGS -L$curwd/gnu/lib"
-fi
-
-# ----------------------------------------
-# Additional checking of compiler characteristics
-# ----------------------------------------
-
-# Check Endianness. If Big Endian, this will define WORDS_BIGENDIAN
-AC_C_BIGENDIAN
-
-
 # ----------------------------------------
 # Init libtool
 # ----------------------------------------
@@ -392,25 +425,29 @@ AC_SEARCH_LIBS([pthread_create], [pthread])
 
 
 # ----------------------------------------
-# Checks for header files.
-# ----------------------------------------
-
-AC_HEADER_STDC
-AC_HEADER_TIME
-AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([sys/ipc.h sys/shm.h])
-AC_CHECK_HEADERS([limits.h malloc.h])
-# Enable use of system-defined bool type if available:
-AC_HEADER_STDBOOL
-
-# ----------------------------------------
 # Check for programs needed to build documentation.
 # ----------------------------------------
 
 AC_CHECK_PROG([have_asciidoc], asciidoc, true, false)
 AC_CHECK_PROG([have_xsltproc], xsltproc, true, false)
+# MacOS with Homebrew requires the environment variable
+# XML_CATALOG_FILES for xsltproc.
+AM_CONDITIONAL([HAVE_XML_CATALOG_FILES], false)
 if $have_asciidoc && $have_xsltproc; then
   AM_CONDITIONAL([ASCIIDOC], true)
+  XML_CATALOG_FILES=
+  AC_CHECK_PROG([have_brew], brew, true, false)
+  if $have_brew; then
+    brew_prefix=$(brew --prefix)
+    catalog_file=$brew_prefix/etc/xml/catalog
+    if test -f $catalog_file; then
+      AM_CONDITIONAL([HAVE_XML_CATALOG_FILES], true)
+      XML_CATALOG_FILES=file:$catalog_file
+    else
+      AC_MSG_WARN([Missing file $catalog_file.])
+    fi
+  fi
+  AC_SUBST([XML_CATALOG_FILES])
 else
   AM_CONDITIONAL([ASCIIDOC], false)
 fi
@@ -421,8 +458,6 @@ fi
 
 AC_CHECK_TYPES([wchar_t],,, [#include "wchar.h"])
 AC_CHECK_TYPES([long long int])
-AC_CHECK_TYPES([off_t],,, [#include "sys/types.h"])
-AC_CHECK_TYPES([mbstate_t],,, [#include "wchar.h"])
 
 # ----------------------------------------
 # Test auxiliary packages
@@ -430,6 +465,9 @@ AC_CHECK_TYPES([mbstate_t],,, [#include "wchar.h"])
 
 PKG_CHECK_MODULES([libcurl], [libcurl], [have_libcurl=true], [have_libcurl=false])
 AM_CONDITIONAL([HAVE_LIBCURL], $have_libcurl)
+if $have_libcurl; then
+  AC_DEFINE([HAVE_LIBCURL], [1], [Enable libcurl])
+fi
 
 PKG_CHECK_MODULES([LEPTONICA], [lept >= 1.74], [have_lept=true], [have_lept=false])
 if $have_lept; then
@@ -441,7 +479,7 @@ fi
 PKG_CHECK_MODULES([libarchive], [libarchive], [have_libarchive=true], [have_libarchive=false])
 AM_CONDITIONAL([HAVE_LIBARCHIVE], [$have_libarchive])
 if $have_libarchive; then
-  AC_DEFINE([HAVE_LIBARCHIVE], [], [Enable libarchive])
+  AC_DEFINE([HAVE_LIBARCHIVE], [1], [Enable libarchive])
   CPPFLAGS="$CPPFLAGS $libarchive_CFLAGS"
 fi
 
@@ -455,8 +493,6 @@ if !($have_icu_uc && $have_icu_i18n); then
   AC_MSG_WARN([Training tools WILL NOT be built.])
   AC_MSG_WARN([Try to install libicu-devel package.])
   AM_CONDITIONAL([ENABLE_TRAINING], false)
-else
-  CPPFLAGS="$CPPFLAGS $ICU_UC_CFLAGS $ICU_I18N_CFLAGS"
 fi
 
 # Check location of pango headers
@@ -466,8 +502,6 @@ if !($have_pango); then
         AC_MSG_WARN([Training tools WILL NOT be built.])
         AC_MSG_WARN([Try to install libpango1.0-dev package.])
         AM_CONDITIONAL([ENABLE_TRAINING], false)
-else
-      CPPFLAGS="$CPPFLAGS $pango_CFLAGS"
 fi
 
 # Check location of cairo headers
@@ -476,31 +510,18 @@ if !($have_cairo); then
         AC_MSG_WARN([Training tools WILL NOT be built because of missing cairo library.])
         AC_MSG_WARN([Try to install libcairo-dev?? package.])
         AM_CONDITIONAL([ENABLE_TRAINING], false)
-else
-      CPPFLAGS="$CPPFLAGS $cairo_CFLAGS"
 fi
 
+PKG_CHECK_MODULES([pangocairo], [pangocairo], [], [false])
+PKG_CHECK_MODULES([pangoft2], [pangoft2], [], [false])
 
 # ----------------------------------------
 # Final Tasks and Output
 # ----------------------------------------
 
 # Output files
+AC_CONFIG_FILES([include/tesseract/version.h])
 AC_CONFIG_FILES([Makefile tesseract.pc])
-AC_CONFIG_FILES([src/api/Makefile])
-AC_CONFIG_FILES([src/api/tess_version.h])
-AC_CONFIG_FILES([src/arch/Makefile])
-AC_CONFIG_FILES([src/ccmain/Makefile])
-AC_CONFIG_FILES([src/opencl/Makefile])
-AC_CONFIG_FILES([src/ccstruct/Makefile])
-AC_CONFIG_FILES([src/ccutil/Makefile])
-AC_CONFIG_FILES([src/classify/Makefile])
-AC_CONFIG_FILES([src/cutil/Makefile])
-AC_CONFIG_FILES([src/dict/Makefile])
-AC_CONFIG_FILES([src/lstm/Makefile])
-AC_CONFIG_FILES([src/textord/Makefile])
-AC_CONFIG_FILES([src/viewer/Makefile])
-AC_CONFIG_FILES([src/wordrec/Makefile])
 AC_CONFIG_FILES([tessdata/Makefile])
 AC_CONFIG_FILES([tessdata/configs/Makefile])
 AC_CONFIG_FILES([tessdata/tessconfigs/Makefile])
@@ -512,7 +533,6 @@ AC_CONFIG_FILES([java/com/google/scrollview/Makefile])
 AC_CONFIG_FILES([java/com/google/scrollview/events/Makefile])
 AC_CONFIG_FILES([java/com/google/scrollview/ui/Makefile])
 AC_CONFIG_FILES([doc/Makefile])
-AM_COND_IF([ENABLE_TRAINING], [AC_CONFIG_FILES(src/training/Makefile)])
 AC_OUTPUT
 
 # Final message

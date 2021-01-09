@@ -35,7 +35,7 @@ struct BlobData {
   BLOB_CHOICE_LIST** choices = nullptr;
 };
 
-void Tesseract::PrerecAllWordsPar(const GenericVector<WordData>& words) {
+void Tesseract::PrerecAllWordsPar(const std::vector<WordData>& words) {
   // Prepare all the blobs.
   GenericVector<BlobData> blobs;
   for (int w = 0; w < words.size(); ++w) {
@@ -57,13 +57,15 @@ void Tesseract::PrerecAllWordsPar(const GenericVector<WordData>& words) {
 #endif  // _OPENMP
     for (int b = 0; b < blobs.size(); ++b) {
       *blobs[b].choices =
-          blobs[b].tesseract->classify_blob(blobs[b].blob, "par", White, nullptr);
+          blobs[b].tesseract->classify_blob(blobs[b].blob, "par",
+                                            ScrollView::WHITE, nullptr);
     }
   } else {
     // TODO(AMD) parallelize this.
     for (int b = 0; b < blobs.size(); ++b) {
       *blobs[b].choices =
-          blobs[b].tesseract->classify_blob(blobs[b].blob, "par", White, nullptr);
+          blobs[b].tesseract->classify_blob(blobs[b].blob, "par",
+                                            ScrollView::WHITE, nullptr);
     }
   }
 }

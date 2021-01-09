@@ -2,10 +2,11 @@
 
 language: cpp
 
-dist: xenial
+dist: bionic
+#osx_image: xcode12.2
 
 env:
-  - LEPT_VER=1.77.0
+  - LEPT_VER=1.78.0
 
 notifications:
   email: false
@@ -53,5 +54,6 @@ install:
 script:
   - mkdir build
   - cd build
-  - cmake .. -DLeptonica_DIR=leptonica-$LEPT_VER/build -DCPPAN_BUILD=OFF
+  - cmake .. -DLeptonica_DIR=leptonica-$LEPT_VER/build -DSW_BUILD=OFF
   - make
+  - sudo make install

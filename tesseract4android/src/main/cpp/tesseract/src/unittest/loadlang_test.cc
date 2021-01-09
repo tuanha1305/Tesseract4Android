@@ -18,10 +18,10 @@
 
 #include <memory>               // std::unique_ptr
 #include <time.h>
-#include "baseapi.h"
+#include <tesseract/baseapi.h>
 #include "include_gunit.h"
 
-namespace {
+namespace tesseract {
 
 class QuickTest : public testing::Test {
  protected:

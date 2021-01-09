@@ -323,12 +323,12 @@ void BaselineRow::SetupBlobDisplacements(const FCOORD& direction) {
   if (debug) {
     for (int i = 0; i < scaled_modes.size(); ++i) {
       tprintf("Top mode = %g * %d\n",
-              scaled_modes[i].key * disp_quant_factor_, scaled_modes[i].data);
+              scaled_modes[i].key * disp_quant_factor_, scaled_modes[i].data());
     }
   }
 #endif
   for (int i = 0; i < scaled_modes.size(); ++i)
-    displacement_modes_.push_back(disp_quant_factor_ * scaled_modes[i].key);
+    displacement_modes_.push_back(disp_quant_factor_ * scaled_modes[i].key());
 }
 
 // Fits a line in the given direction to blobs that are close to the given
@@ -387,11 +387,16 @@ void BaselineRow::FitConstrainedIfBetter(int debug,
 
 // Returns the perpendicular distance of the point from the straight
 // baseline.
-double BaselineRow::PerpDistanceFromBaseline(const FCOORD& pt) const {
+float BaselineRow::PerpDistanceFromBaseline(const FCOORD& pt) const {
   FCOORD baseline_vector(baseline_pt2_ - baseline_pt1_);
   FCOORD offset_vector(pt - baseline_pt1_);
-  double distance = baseline_vector * offset_vector;
-  return sqrt(distance * distance / baseline_vector.sqlength());
+  float distance = baseline_vector * offset_vector;
+  float sqlength = baseline_vector.sqlength();
+  if (sqlength == 0.0f) {
+    tprintf("unexpected baseline vector (0,0)\n");
+    return 0.0f;
+  }
+  return std::sqrt(distance * distance / sqlength);
 }
 
 // Computes the bounding box of the row.
@@ -572,10 +577,11 @@ void BaselineBlock::FitBaselineSplines(bool enable_splines,
     restore_underlined_blobs(block_);
 }
 
+#ifndef GRAPHICS_DISABLED
+
 // Draws the (straight) baselines and final blobs colored according to
 // what was discarded as noise and what is associated with each row.
 void BaselineBlock::DrawFinalRows(const ICOORD& page_tr) {
-#ifndef GRAPHICS_DISABLED
   if (non_text_block_) return;
   double gradient = tan(skew_angle_);
   FCOORD rotation(1.0f, 0.0f);
@@ -596,8 +602,9 @@ void BaselineBlock::DrawFinalRows(const ICOORD& page_tr) {
   if (block_->blobs.length() > 0)
     tprintf("%d blobs discarded as noise\n", block_->blobs.length());
   draw_meanlines(block_, gradient, left_edge, ScrollView::WHITE, rotation);
-#endif
 }
+
+#endif // !GRAPHICS_DISABLED
 
 void BaselineBlock::DrawPixSpline(Pix* pix_in) {
   if (non_text_block_) return;
@@ -851,9 +858,11 @@ void BaselineDetect::ComputeBaselineSplinesAndXheights(const ICOORD& page_tr,
     if (enable_splines)
       bl_block->PrepareForSplineFitting(page_tr, remove_noise);
     bl_block->FitBaselineSplines(enable_splines, show_final_rows, textord);
+#ifndef GRAPHICS_DISABLED
     if (show_final_rows) {
       bl_block->DrawFinalRows(page_tr);
     }
+#endif
   }
 }
 

@@ -15,9 +15,6 @@
 // limitations under the License.
 ///////////////////////////////////////////////////////////////////////
 
-#ifdef GOOGLE_TESSERACT
-#include "base/commandlineflags.h"
-#endif
 #include <cerrno>
 #include "commontraining.h"
 #include "fileio.h"             // for LoadFileLinesToStrings
@@ -27,6 +24,8 @@
 #include "strngs.h"
 #include "tprintf.h"
 #include "unicharset_training_utils.h"
+
+using namespace tesseract;
 
 static INT_PARAM_FLAG(debug_interval, 0, "How often to display the alignment.");
 static STRING_PARAM_FLAG(net_spec, "", "Network specification");
@@ -79,7 +78,7 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
   if (FLAGS_traineddata.empty()) {
-    tprintf("Must provide a --traineddata see training wiki\n");
+    tprintf("Must provide a --traineddata see training documentation\n");
     return EXIT_FAILURE;
   }
 
@@ -104,7 +103,7 @@ int main(int argc, char **argv) {
   checkpoint_file += "_checkpoint";
   STRING checkpoint_bak = checkpoint_file + ".bak";
   tesseract::LSTMTrainer trainer(
-      nullptr, nullptr, nullptr, nullptr, FLAGS_model_output.c_str(),
+      FLAGS_model_output.c_str(),
       checkpoint_file.c_str(), FLAGS_debug_interval,
       static_cast<int64_t>(FLAGS_max_image_MB) * 1048576);
   trainer.InitCharSet(FLAGS_traineddata.c_str());
@@ -134,7 +133,7 @@ int main(int argc, char **argv) {
     tprintf("Must supply a list of training filenames! --train_listfile\n");
     return EXIT_FAILURE;
   }
-  GenericVector<STRING> filenames;
+  std::vector<STRING> filenames;
   if (!tesseract::LoadFileLinesToStrings(FLAGS_train_listfile.c_str(),
                                          &filenames)) {
     tprintf("Failed to load list of training filenames from %s\n",
@@ -143,10 +142,10 @@ int main(int argc, char **argv) {
   }
 
   // Checkpoints always take priority if they are available.
-  if (trainer.TryLoadingCheckpoint(checkpoint_file.string(), nullptr) ||
-      trainer.TryLoadingCheckpoint(checkpoint_bak.string(), nullptr)) {
+  if (trainer.TryLoadingCheckpoint(checkpoint_file.c_str(), nullptr) ||
+      trainer.TryLoadingCheckpoint(checkpoint_bak.c_str(), nullptr)) {
     tprintf("Successfully restored trainer from %s\n",
-            checkpoint_file.string());
+            checkpoint_file.c_str());
   } else {
     if (!FLAGS_continue_from.empty()) {
       // Load a past model file to improve upon.
@@ -193,13 +192,13 @@ int main(int argc, char **argv) {
                                1048576);
   tesseract::TestCallback tester_callback = nullptr;
   if (!FLAGS_eval_listfile.empty()) {
+    using namespace std::placeholders;  // for _1, _2, _3...
     if (!tester.LoadAllEvalData(FLAGS_eval_listfile.c_str())) {
       tprintf("Failed to load eval data from: %s\n",
               FLAGS_eval_listfile.c_str());
       return EXIT_FAILURE;
     }
-    tester_callback =
-        NewPermanentTessCallback(&tester, &tesseract::LSTMTester::RunEvalAsync);
+    tester_callback = std::bind(&tesseract::LSTMTester::RunEvalAsync, &tester, _1, _2, _3, _4);
   }
   do {
     // Train a few.
@@ -212,11 +211,10 @@ int main(int argc, char **argv) {
     }
     STRING log_str;
     trainer.MaintainCheckpoints(tester_callback, &log_str);
-    tprintf("%s\n", log_str.string());
+    tprintf("%s\n", log_str.c_str());
   } while (trainer.best_error_rate() > FLAGS_target_error_rate &&
            (trainer.training_iteration() < FLAGS_max_iterations ||
             FLAGS_max_iterations == 0));
-  delete tester_callback;
   tprintf("Finished! Error rate = %g\n", trainer.best_error_rate());
   return EXIT_SUCCESS;
 } /* main */
