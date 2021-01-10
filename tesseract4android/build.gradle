@@ -5,8 +5,6 @@ android {
 	defaultConfig {
 		minSdkVersion 16
 		targetSdkVersion 28
-		// TODO: We can set specific NDK version we want to use, see https://developer.android.com/studio/projects/install-ndk#specific-version
-		// ndkVersion "major.minor.build"
 		versionCode 4
 		versionName "2.1.0"
 		testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
